@@ -1,0 +1,23 @@
+# Elixir
+_build/
+deps/
+*.beam
+*.ez
+.elixir_ls/
+
+# Mix
+mix.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+bot_army_elixir_tools_mcp_server
