@@ -4,27 +4,30 @@ defmodule BotArmyElixirToolsMcpServer.Application do
 
   @impl true
   def start(_type, _args) do
-    {host, port} = parse_nats_server(System.get_env("NATS_SERVERS", "localhost:4222"))
+    log_to_file("Application.start called")
 
     children = [
-      {Gnat, %{name: :nats, host: host, port: port, connection_timeout: 2000}},
+      # NATS connection is already managed by bot_army_runtime
       {BotArmyElixirToolsMcpServer.StdioHandler, []}
     ]
 
-    opts = [strategy: :one_for_all, name: BotArmyElixirToolsMcpServer.Supervisor]
-    Supervisor.start_link(children, opts)
+    opts = [strategy: :one_for_one, name: BotArmyElixirToolsMcpServer.Supervisor]
+    log_to_file("Starting supervisor with BotArmyRuntime.NATS.Connection")
+
+    case Supervisor.start_link(children, opts) do
+      {:ok, pid} ->
+        log_to_file("Supervisor started: #{inspect(pid)}")
+        {:ok, pid}
+
+      {:error, reason} ->
+        log_to_file("Supervisor failed: #{inspect(reason)}")
+        {:error, reason}
+    end
   end
 
-  defp parse_nats_server(server_str) do
-    case String.split(server_str, ":") do
-      [host, port_str] ->
-        {String.to_charlist(host), String.to_integer(port_str)}
-
-      [host] ->
-        {String.to_charlist(host), 4222}
-
-      _ ->
-        {~c"localhost", 4222}
-    end
+  defp log_to_file(msg) do
+    log_file = "/tmp/bot_army_mcp_server.log"
+    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+    File.write(log_file, "[#{timestamp}] #{msg}\n", [:append])
   end
 end

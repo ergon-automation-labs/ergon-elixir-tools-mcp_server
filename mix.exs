@@ -14,15 +14,19 @@ defmodule BotArmyElixirToolsMcpServer.MixProject do
 
   def application do
     [
-      # Don't auto-start logger - CLI manages it to prevent stdout contamination
-      mod: {BotArmyElixirToolsMcpServer.Application, []}
+      # Don't auto-start - CLI starts the application manually
+      # This allows us to suppress logger output before the app starts
     ]
   end
 
   defp deps do
+    runtime_path =
+      System.get_env("BOT_ARMY_RUNTIME_PATH", "/Users/abby/code/elixir_bots/bot_army_runtime")
+
     [
       {:gnat, "~> 1.7"},
       {:jason, "~> 1.4"},
+      {:bot_army_runtime, path: runtime_path},
       {:credo, "~> 1.7", only: [:dev, :test]},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]

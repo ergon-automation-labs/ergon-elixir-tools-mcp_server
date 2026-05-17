@@ -19,16 +19,19 @@ help:
 	@echo "  logs             - Stream logs (if running in background)"
 
 run:
-	mix run --no-halt
+	@if [ -f .env.local ]; then source .env.local; fi && mix run --no-halt
 
 dev:
-	MIX_ENV=dev mix run --no-halt
+	@if [ -f .env.local ]; then source .env.local; fi && MIX_ENV=dev mix run --no-halt
 
 test:
-	mix test
+	@if [ -f .env.local ]; then source .env.local; fi && mix test
 
-build:
-	MIX_ENV=prod mix escript.build
+deps:
+	@if [ -f .env.local ]; then source .env.local; fi && mix deps.get
+
+build: deps
+	@if [ -f .env.local ]; then source .env.local; fi && MIX_ENV=prod mix escript.build
 
 escript: build
 

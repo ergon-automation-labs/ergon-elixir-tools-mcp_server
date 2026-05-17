@@ -6,6 +6,7 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
 
   def list_tools do
     [
+      ping_tool(),
       task_create_tool(),
       task_list_tool(),
       task_get_tool(),
@@ -19,8 +20,21 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
     ]
   end
 
+  defp ping_tool do
+    %{
+      "name" => "ping",
+      "description" => "Test connectivity - returns pong",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{},
+        "required" => []
+      }
+    }
+  end
+
   def execute(tool_name, params) do
     case tool_name do
+      "ping" -> {:ok, "pong"}
       "task_create" -> execute_task_create(params)
       "task_list" -> execute_task_list(params)
       "task_get" -> execute_task_get(params)
@@ -283,24 +297,66 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
   end
 
   defp execute_world_snapshot(_params) do
-    case bridge_request("bridge.world.snapshot", %{}, 5_000) do
-      {:ok, result} -> {:ok, result}
-      error -> error
-    end
+    log_to_file("world_snapshot: Starting bridge request")
+
+    result =
+      try do
+        case bridge_request("bridge.world.snapshot", %{}, 3_000) do
+          {:ok, result} ->
+            log_to_file("world_snapshot: Bridge succeeded")
+            {:ok, result}
+
+          {:error, reason} ->
+            log_to_file("world_snapshot: Bridge error: #{inspect(reason)}")
+            {:error, "Bridge unavailable: #{reason}"}
+        end
+      rescue
+        e ->
+          log_to_file("world_snapshot: Exception: #{inspect(e)}")
+          {:error, "Bridge request exception"}
+      end
+
+    log_to_file("world_snapshot: Returning #{inspect(result)}")
+    result
   end
 
-  # Bridge request helper - uses Gnat directly to avoid bot_army_runtime startup noise
+  defp log_to_file(msg) do
+    log_file = "/tmp/bot_army_mcp_server.log"
+    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+    File.write(log_file, "[#{timestamp}] Tools: #{msg}\n", [:append])
+  end
+
+  # Bridge request helper - uses BotArmyRuntime.NATS for proper connection management
   defp bridge_request(subject, payload, timeout \\ 5_000) do
-    case Gnat.request(:nats, subject, Jason.encode!(payload), timeout: timeout) do
-      {:ok, response} ->
-        case Jason.decode(response.body) do
-          {:ok, decoded} -> {:ok, decoded}
-          {:error, reason} -> {:error, "Failed to decode response: #{inspect(reason)}"}
+    log_to_file("bridge_request: #{subject}")
+
+    # Get the NATS connection from BotArmyRuntime
+    case GenServer.call(BotArmyRuntime.NATS.Connection, :get_connection) do
+      {:ok, conn} ->
+        log_to_file("bridge_request: Got connection, sending request")
+
+        case Gnat.request(conn, subject, Jason.encode!(payload), timeout: timeout) do
+          {:ok, response} ->
+            log_to_file("bridge_request: Got response from #{subject}")
+
+            case Jason.decode(response.body) do
+              {:ok, decoded} ->
+                log_to_file("bridge_request: Decoded response")
+                {:ok, decoded}
+
+              {:error, reason} ->
+                log_to_file("bridge_request: JSON decode error: #{inspect(reason)}")
+                {:error, "Failed to decode response: #{to_string(reason)}"}
+            end
+
+          {:error, reason} ->
+            log_to_file("bridge_request: Gnat request failed: #{inspect(reason)}")
+            {:error, "Bridge request failed: #{to_string(reason)}"}
         end
 
       {:error, reason} ->
-        Logger.error("[MCP] Bridge request failed: #{subject} - #{inspect(reason)}")
-        {:error, "Bridge request failed: #{inspect(reason)}"}
+        log_to_file("bridge_request: No connection: #{inspect(reason)}")
+        {:error, "NATS not connected: #{to_string(reason)}"}
     end
   end
 end
