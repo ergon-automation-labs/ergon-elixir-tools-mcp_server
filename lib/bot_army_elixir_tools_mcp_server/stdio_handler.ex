@@ -168,7 +168,7 @@ defmodule BotArmyElixirToolsMcpServer.StdioHandler do
 
   defp send_json(data) do
     try do
-      json = Jason.encode!(data)
+      json = Jason.encode!(data, escape: :unicode)
       # Log the JSON size for debugging
       log_debug("JSON output size: #{byte_size(json)} bytes")
       # Try to detect any invalid escape sequences before sending
@@ -197,7 +197,7 @@ defmodule BotArmyElixirToolsMcpServer.StdioHandler do
           }
         }
 
-        json = Jason.encode!(error_response)
+        json = Jason.encode!(error_response, escape: :unicode)
         IO.write("#{json}\n")
     end
   end
