@@ -180,6 +180,12 @@ defmodule BotArmyElixirToolsMcpServer.StdioHandler do
       end
 
       IO.write("#{json}\n")
+      # Flush to ensure immediate delivery to client
+      case File.write(:user, "") do
+        :ok -> :ok
+        _ -> :ok
+      end
+
       :ok
     rescue
       e ->
@@ -199,6 +205,11 @@ defmodule BotArmyElixirToolsMcpServer.StdioHandler do
 
         json = Jason.encode!(error_response)
         IO.write("#{json}\n")
+
+        case File.write(:user, "") do
+          :ok -> :ok
+          _ -> :ok
+        end
     end
   end
 
