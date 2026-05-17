@@ -1,13 +1,8 @@
 import Config
 
-config :logger,
-  backends: [:console]
-
-config :logger, :console, device: :standard_error
-
-# Suppress infrastructure startup logs to stdout (critical for MCP protocol)
-config :inets, :httpc_verbose, false
-config :kernel, :error_logger_format_depth, 1
+# Logger is configured entirely in CLI (lib/bot_army_elixir_tools_mcp_server/cli.ex)
+# This prevents stdout contamination from old logger configs
+# Config here is only for non-logger settings
 
 if config_env() == :dev do
   config :logger, level: :debug

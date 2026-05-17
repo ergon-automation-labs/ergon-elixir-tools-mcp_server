@@ -4,7 +4,7 @@ defmodule BotArmyElixirToolsMcpServer.MixProject do
   def project do
     [
       app: :bot_army_elixir_tools_mcp_server,
-      version: "0.1.2",
+      version: "0.1.3",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -14,7 +14,7 @@ defmodule BotArmyElixirToolsMcpServer.MixProject do
 
   def application do
     [
-      extra_applications: [:logger],
+      # Don't auto-start logger - CLI manages it to prevent stdout contamination
       mod: {BotArmyElixirToolsMcpServer.Application, []}
     ]
   end
