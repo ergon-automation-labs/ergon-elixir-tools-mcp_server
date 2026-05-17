@@ -16,6 +16,11 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
       project_create_tool(),
       project_list_tool(),
       graph_query_tool(),
+      graph_search_tool(),
+      graph_stats_tool(),
+      graph_list_tool(),
+      graph_refresh_tool(),
+      graph_context_tool(),
       world_snapshot_tool()
     ]
   end
@@ -44,6 +49,11 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
       "project_create" -> execute_project_create(params)
       "project_list" -> execute_project_list(params)
       "graph_query" -> execute_graph_query(params)
+      "graph_search" -> execute_graph_search(params)
+      "graph_stats" -> execute_graph_stats(params)
+      "graph_list" -> execute_graph_list(params)
+      "graph_refresh" -> execute_graph_refresh(params)
+      "graph_context" -> execute_graph_context(params)
       "world_snapshot" -> execute_world_snapshot(params)
       _ -> {:error, "Unknown tool: #{tool_name}"}
     end
@@ -198,6 +208,81 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
     }
   end
 
+  defp graph_search_tool do
+    %{
+      "name" => "graph_search",
+      "description" => "Search within a codebase graph for symbols, files, or patterns",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "repo_path" => %{"type" => "string", "description" => "Repository path"},
+          "query" => %{
+            "type" => "string",
+            "description" => "Search query (symbol, file, or pattern)"
+          },
+          "type" => %{
+            "type" => "string",
+            "enum" => ["symbol", "file", "pattern"],
+            "description" => "Type of search"
+          }
+        },
+        "required" => ["repo_path", "query"]
+      }
+    }
+  end
+
+  defp graph_stats_tool do
+    %{
+      "name" => "graph_stats",
+      "description" => "Get statistics about a codebase graph (modules, functions, complexity)",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "repo_path" => %{"type" => "string", "description" => "Repository path"}
+        },
+        "required" => ["repo_path"]
+      }
+    }
+  end
+
+  defp graph_list_tool do
+    %{
+      "name" => "graph_list",
+      "description" => "List all available cached codebase graphs",
+      "inputSchema" => %{"type" => "object", "properties" => %{}}
+    }
+  end
+
+  defp graph_refresh_tool do
+    %{
+      "name" => "graph_refresh",
+      "description" => "Refresh/regenerate the knowledge graph for a repository",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "repo_path" => %{"type" => "string", "description" => "Repository path"}
+        },
+        "required" => ["repo_path"]
+      }
+    }
+  end
+
+  defp graph_context_tool do
+    %{
+      "name" => "graph_context",
+      "description" => "Get context around a specific symbol or file in the graph",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "repo_path" => %{"type" => "string", "description" => "Repository path"},
+          "symbol" => %{"type" => "string", "description" => "Symbol or file name"},
+          "depth" => %{"type" => "number", "description" => "Context depth (1-5, default 2)"}
+        },
+        "required" => ["repo_path", "symbol"]
+      }
+    }
+  end
+
   defp world_snapshot_tool do
     %{
       "name" => "world_snapshot",
@@ -291,6 +376,53 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
     }
 
     case bridge_request("bridge.graph.query", payload, 10_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
+  end
+
+  defp execute_graph_search(%{"repo_path" => repo_path, "query" => query} = params) do
+    payload = %{
+      "repo_path" => repo_path,
+      "query" => query,
+      "type" => Map.get(params, "type", "symbol")
+    }
+
+    case bridge_request("bridge.graph.search", payload, 5_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
+  end
+
+  defp execute_graph_stats(%{"repo_path" => repo_path}) do
+    case bridge_request("bridge.graph.stats", %{"repo_path" => repo_path}, 5_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
+  end
+
+  defp execute_graph_list(_params) do
+    case bridge_request("bridge.graph.list", %{}, 3_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
+  end
+
+  defp execute_graph_refresh(%{"repo_path" => repo_path}) do
+    case bridge_request("bridge.graph.refresh", %{"repo_path" => repo_path}, 30_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
+  end
+
+  defp execute_graph_context(%{"repo_path" => repo_path, "symbol" => symbol} = params) do
+    payload = %{
+      "repo_path" => repo_path,
+      "symbol" => symbol,
+      "depth" => Map.get(params, "depth", 2)
+    }
+
+    case bridge_request("bridge.graph.context", payload, 10_000) do
       {:ok, result} -> {:ok, result}
       error -> error
     end
