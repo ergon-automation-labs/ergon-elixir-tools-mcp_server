@@ -1,17 +1,14 @@
-defmodule BotArmyMcpServer.StdioHandlerTest do
+defmodule BotArmyElixirToolsMcpServer.StdioHandlerTest do
   use ExUnit.Case
-  @moduletag :integration
+  @moduletag :core
 
   describe "tools/list" do
-    test "returns all 10 tools with correct schema" do
-      request = %{"jsonrpc" => "2.0", "id" => 1, "method" => "tools/list", "params" => %{}}
+    test "returns all tools with correct schema" do
+      tools = BotArmyElixirToolsMcpServer.Tools.list_tools()
+      assert is_list(tools)
+      assert Enum.count(tools) == 18
 
-      assert {:ok, result} = BotArmyMcpServer.Tools.execute("tools/list", %{})
-      assert is_list(result["tools"])
-      assert Enum.count(result["tools"]) == 10
-
-      # Verify tool schema
-      Enum.each(result["tools"], fn tool ->
+      Enum.each(tools, fn tool ->
         assert tool["name"]
         assert tool["description"]
         assert tool["inputSchema"]
@@ -21,10 +18,11 @@ defmodule BotArmyMcpServer.StdioHandlerTest do
     end
 
     test "tool names are present" do
-      assert {:ok, result} = BotArmyMcpServer.Tools.execute("tools/list", %{})
-      tool_names = Enum.map(result["tools"], & &1["name"])
+      tools = BotArmyElixirToolsMcpServer.Tools.list_tools()
+      tool_names = Enum.map(tools, & &1["name"])
 
       expected_tools = [
+        "ping",
         "task_create",
         "task_list",
         "task_get",
@@ -34,7 +32,14 @@ defmodule BotArmyMcpServer.StdioHandlerTest do
         "project_create",
         "project_list",
         "graph_query",
-        "world_snapshot"
+        "graph_search",
+        "graph_stats",
+        "graph_list",
+        "graph_refresh",
+        "graph_context",
+        "world_snapshot",
+        "para_capture",
+        "para_fs_write"
       ]
 
       assert tool_names == expected_tools
@@ -43,20 +48,23 @@ defmodule BotArmyMcpServer.StdioHandlerTest do
 
   describe "initialize" do
     test "returns protocol version and server info" do
-      request = %{"jsonrpc" => "2.0", "id" => 1, "method" => "initialize"}
-      {:ok, state} = BotArmyMcpServer.StdioHandler.init(nil)
+      {:ok, _state} = BotArmyElixirToolsMcpServer.StdioHandler.init(nil)
 
-      # Manually call the handler (in real usage, this goes through read_loop)
-      # For now, just verify the Tools module responds correctly
-      tools = BotArmyMcpServer.Tools.list_tools()
-      assert Enum.count(tools) == 10
+      tools = BotArmyElixirToolsMcpServer.Tools.list_tools()
+      assert Enum.count(tools) == 18
     end
   end
 
   describe "unknown method" do
     test "returns error for unknown tools" do
-      assert {:error, reason} = BotArmyMcpServer.Tools.execute("unknown_tool", %{})
+      assert {:error, reason} = BotArmyElixirToolsMcpServer.Tools.execute("unknown_tool", %{})
       assert String.contains?(reason, "Unknown tool")
+    end
+  end
+
+  describe "ping" do
+    test "returns pong" do
+      assert {:ok, "pong"} = BotArmyElixirToolsMcpServer.Tools.execute("ping", %{})
     end
   end
 end

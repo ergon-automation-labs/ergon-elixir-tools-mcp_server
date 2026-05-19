@@ -21,7 +21,9 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
       graph_list_tool(),
       graph_refresh_tool(),
       graph_context_tool(),
-      world_snapshot_tool()
+      world_snapshot_tool(),
+      para_capture_tool(),
+      para_fs_write_tool()
     ]
   end
 
@@ -55,6 +57,8 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
       "graph_refresh" -> execute_graph_refresh(params)
       "graph_context" -> execute_graph_context(params)
       "world_snapshot" -> execute_world_snapshot(params)
+      "para_capture" -> execute_para_capture(params)
+      "para_fs_write" -> execute_para_fs_write(params)
       _ -> {:error, "Unknown tool: #{tool_name}"}
     end
   end
@@ -291,6 +295,52 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
     }
   end
 
+  defp para_capture_tool do
+    %{
+      "name" => "para_capture",
+      "description" => "Append a note to the PARA inbox via para.capture.append",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "summary" => %{"type" => "string", "description" => "Short summary / title"},
+          "details" => %{
+            "type" => "string",
+            "description" => "Longer markdown content (optional)"
+          },
+          "topic" => %{
+            "type" => "string",
+            "description" => "Topic tag (optional, default: general)"
+          },
+          "task_id" => %{"type" => "string", "description" => "Optional linked GTD task ID"}
+        },
+        "required" => ["summary"]
+      }
+    }
+  end
+
+  defp para_fs_write_tool do
+    %{
+      "name" => "para_fs_write",
+      "description" => "Write or append a file to the PARA filesystem via para.fs.write",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "relative_path" => %{
+            "type" => "string",
+            "description" => "Path relative to PARA root, e.g. inbox/note.md"
+          },
+          "content" => %{"type" => "string", "description" => "File content (markdown)"},
+          "mode" => %{
+            "type" => "string",
+            "enum" => ["write", "append"],
+            "description" => "Write mode: write (overwrite) or append"
+          }
+        },
+        "required" => ["relative_path", "content"]
+      }
+    }
+  end
+
   # Execution handlers
   defp execute_task_create(params) do
     case bridge_request("bridge.task.create", params) do
@@ -450,6 +500,42 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
 
     log_to_file("world_snapshot: Returning #{inspect(result)}")
     result
+  end
+
+  defp execute_para_capture(params) do
+    summary = Map.get(params, "summary")
+
+    payload = %{
+      "schema_version" => "1.0",
+      "source_bot" => "claude_bridge",
+      "summary" => summary,
+      "details" => Map.get(params, "details", ""),
+      "topic" => Map.get(params, "topic", "general"),
+      "task_id" => Map.get(params, "task_id")
+    }
+
+    case bridge_request("para.capture.append", payload, 5_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
+  end
+
+  defp execute_para_fs_write(params) do
+    relative_path = Map.get(params, "relative_path")
+    content = Map.get(params, "content")
+    mode = Map.get(params, "mode", "write")
+
+    payload = %{
+      "schema_version" => "1.0",
+      "relative_path" => relative_path,
+      "mode" => mode,
+      "content" => content
+    }
+
+    case bridge_request("para.fs.write", payload, 5_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
   end
 
   defp log_to_file(msg) do
