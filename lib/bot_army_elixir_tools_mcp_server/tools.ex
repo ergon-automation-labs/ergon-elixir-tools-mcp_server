@@ -23,7 +23,10 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
       graph_context_tool(),
       world_snapshot_tool(),
       para_capture_tool(),
-      para_fs_write_tool()
+      para_fs_write_tool(),
+      registry_list_bots_tool(),
+      registry_list_subjects_tool(),
+      bridge_request_tool()
     ]
   end
 
@@ -59,6 +62,9 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
       "world_snapshot" -> execute_world_snapshot(params)
       "para_capture" -> execute_para_capture(params)
       "para_fs_write" -> execute_para_fs_write(params)
+      "registry_list_bots" -> execute_registry_list_bots(params)
+      "registry_list_subjects" -> execute_registry_list_subjects(params)
+      "bridge_request" -> execute_bridge_request(params)
       _ -> {:error, "Unknown tool: #{tool_name}"}
     end
   end
@@ -341,6 +347,47 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
     }
   end
 
+  defp registry_list_bots_tool do
+    %{
+      "name" => "registry_list_bots",
+      "description" => "List all registered bots with versions, health, and subjects",
+      "inputSchema" => %{"type" => "object", "properties" => %{}}
+    }
+  end
+
+  defp registry_list_subjects_tool do
+    %{
+      "name" => "registry_list_subjects",
+      "description" => "List all NATS subjects and their providers",
+      "inputSchema" => %{"type" => "object", "properties" => %{}}
+    }
+  end
+
+  defp bridge_request_tool do
+    %{
+      "name" => "bridge_request",
+      "description" => "Send a request to any bridge.* subject (operator façade only)",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "subject" => %{
+            "type" => "string",
+            "description" => "NATS subject, must start with bridge."
+          },
+          "payload" => %{
+            "type" => "object",
+            "description" => "JSON payload to send"
+          },
+          "timeout_ms" => %{
+            "type" => "number",
+            "description" => "Timeout in milliseconds (default 5000)"
+          }
+        },
+        "required" => ["subject"]
+      }
+    }
+  end
+
   # Execution handlers
   defp execute_task_create(params) do
     case bridge_request("bridge.task.create", params) do
@@ -479,27 +526,52 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
   end
 
   defp execute_world_snapshot(_params) do
-    log_to_file("world_snapshot: Starting bridge request")
+    log_to_file("world_snapshot: querying registry")
 
     result =
-      try do
-        case bridge_request("bridge.world.snapshot", %{}, 3_000) do
-          {:ok, result} ->
-            log_to_file("world_snapshot: Bridge succeeded")
-            {:ok, result}
+      case bridge_request("bot_army.registry.bots.list", %{}, 5_000) do
+        {:ok, %{"ok" => true, "data" => data}} ->
+          bots = Map.get(data, "bots", [])
 
-          {:error, reason} ->
-            log_to_file("world_snapshot: Bridge error: #{inspect(reason)}")
-            {:error, "Bridge unavailable: #{reason}"}
-        end
-      rescue
-        e ->
-          log_to_file("world_snapshot: Exception: #{inspect(e)}")
-          {:error, "Bridge request exception"}
+          summary =
+            Enum.map(bots, fn b ->
+              %{
+                "name" => Map.get(b, "name"),
+                "version" => Map.get(b, "version"),
+                "last_heartbeat" => Map.get(b, "last_heartbeat"),
+                "subject_count" => Map.get(b, "subject_count", 0),
+                "status" => if(recent_heartbeat?(b), do: "healthy", else: "stale")
+              }
+            end)
+
+          {:ok, %{"bots" => summary, "count" => length(summary)}}
+
+        {:ok, %{"ok" => false} = error_resp} ->
+          {:error, Map.get(error_resp, "error", "Registry returned error")}
+
+        {:error, reason} ->
+          log_to_file("world_snapshot: registry error: #{inspect(reason)}")
+          {:error, "Registry unavailable: #{reason}"}
+
+        _ ->
+          {:error, "Unexpected response from registry"}
       end
 
     log_to_file("world_snapshot: Returning #{inspect(result)}")
     result
+  end
+
+  defp recent_heartbeat?(bot) do
+    case Map.get(bot, "last_heartbeat") do
+      nil ->
+        false
+
+      ts ->
+        case DateTime.from_iso8601(ts) do
+          {:ok, dt, _} -> DateTime.diff(DateTime.utc_now(), dt, :second) < 120
+          _ -> false
+        end
+    end
   end
 
   defp execute_para_capture(params) do
@@ -535,6 +607,36 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
     case bridge_request("para.fs.write", payload, 5_000) do
       {:ok, result} -> {:ok, result}
       error -> error
+    end
+  end
+
+  defp execute_registry_list_bots(_params) do
+    case bridge_request("bot_army.registry.bots.list", %{}, 5_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
+  end
+
+  defp execute_registry_list_subjects(_params) do
+    case bridge_request("bot_army.registry.subjects.list", %{}, 5_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
+  end
+
+  defp execute_bridge_request(params) do
+    subject = Map.get(params, "subject", "")
+
+    if not String.starts_with?(subject, "bridge.") do
+      {:error, "Subject must start with bridge. (operator façade only)"}
+    else
+      payload = Map.get(params, "payload", %{})
+      timeout = Map.get(params, "timeout_ms", 5_000)
+
+      case bridge_request(subject, payload, timeout) do
+        {:ok, result} -> {:ok, result}
+        error -> error
+      end
     end
   end
 
