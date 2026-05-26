@@ -4,7 +4,7 @@ defmodule BotArmyElixirToolsMcpServer.MixProject do
   def project do
     [
       app: :bot_army_elixir_tools_mcp_server,
-      version: "0.2.2",
+      version: "0.3.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -21,12 +21,14 @@ defmodule BotArmyElixirToolsMcpServer.MixProject do
 
   defp deps do
     runtime_path =
-      System.get_env("BOT_ARMY_RUNTIME_PATH", "/Users/abby/code/elixir_bots/bot_army_runtime")
+      System.get_env("BOT_ARMY_RUNTIME_PATH", "/Users/abby/code/bots/bot_army_library_runtime")
 
     [
       {:gnat, "~> 1.7"},
       {:jason, "~> 1.4"},
-      {:bot_army_runtime, path: runtime_path},
+      {:bandit, "~> 1.5"},
+      {:plug, "~> 1.16"},
+      {:bot_army_library_runtime, path: runtime_path},
       {:credo, "~> 1.7", only: [:dev, :test]},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
