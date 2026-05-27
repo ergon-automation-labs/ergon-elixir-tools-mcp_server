@@ -26,6 +26,8 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
       para_fs_write_tool(),
       registry_list_bots_tool(),
       registry_list_subjects_tool(),
+      health_check_tool(),
+      nats_request_tool(),
       bridge_request_tool()
     ]
   end
@@ -64,6 +66,8 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
       "para_fs_write" -> execute_para_fs_write(params)
       "registry_list_bots" -> execute_registry_list_bots(params)
       "registry_list_subjects" -> execute_registry_list_subjects(params)
+      "health_check" -> execute_health_check(params)
+      "nats_request" -> execute_nats_request(params)
       "bridge_request" -> execute_bridge_request(params)
       _ -> {:error, "Unknown tool: #{tool_name}"}
     end
@@ -363,6 +367,49 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
     }
   end
 
+  defp health_check_tool do
+    %{
+      "name" => "health_check",
+      "description" => "Check health of a specific bot via system.health.<bot_name>",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "bot_name" => %{
+            "type" => "string",
+            "description" => "Bot registry name (e.g. gtd, llm, dispatcher)"
+          }
+        },
+        "required" => ["bot_name"]
+      }
+    }
+  end
+
+  defp nats_request_tool do
+    %{
+      "name" => "nats_request",
+      "description" =>
+        "Send a request/reply to any NATS subject (direct bot access, not via bridge)",
+      "inputSchema" => %{
+        "type" => "object",
+        "properties" => %{
+          "subject" => %{
+            "type" => "string",
+            "description" => "Full NATS subject (e.g. bot_army.gtd.task.list, system.health.llm)"
+          },
+          "payload" => %{
+            "type" => "object",
+            "description" => "JSON payload to send (default: {})"
+          },
+          "timeout_ms" => %{
+            "type" => "number",
+            "description" => "Timeout in milliseconds (default 5000)"
+          }
+        },
+        "required" => ["subject"]
+      }
+    }
+  end
+
   defp bridge_request_tool do
     %{
       "name" => "bridge_request",
@@ -619,6 +666,26 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
 
   defp execute_registry_list_subjects(_params) do
     case bridge_request("bot_army.registry.subjects.list", %{}, 5_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
+  end
+
+  defp execute_health_check(%{"bot_name" => bot_name}) do
+    subject = "system.health.#{bot_name}"
+
+    case bridge_request(subject, %{}, 5_000) do
+      {:ok, result} -> {:ok, result}
+      error -> error
+    end
+  end
+
+  defp execute_nats_request(params) do
+    subject = Map.get(params, "subject", "")
+    payload = Map.get(params, "payload", %{})
+    timeout = Map.get(params, "timeout_ms", 5_000)
+
+    case bridge_request(subject, payload, timeout) do
       {:ok, result} -> {:ok, result}
       error -> error
     end

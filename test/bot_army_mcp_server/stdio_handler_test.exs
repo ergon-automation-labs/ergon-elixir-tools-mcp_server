@@ -6,7 +6,7 @@ defmodule BotArmyElixirToolsMcpServer.StdioHandlerTest do
     test "returns all tools with correct schema" do
       tools = BotArmyElixirToolsMcpServer.Tools.list_tools()
       assert is_list(tools)
-      assert Enum.count(tools) == 21
+      assert Enum.count(tools) == 23
 
       Enum.each(tools, fn tool ->
         assert tool["name"]
@@ -42,6 +42,8 @@ defmodule BotArmyElixirToolsMcpServer.StdioHandlerTest do
         "para_fs_write",
         "registry_list_bots",
         "registry_list_subjects",
+        "health_check",
+        "nats_request",
         "bridge_request"
       ]
 
@@ -54,7 +56,7 @@ defmodule BotArmyElixirToolsMcpServer.StdioHandlerTest do
       {:ok, _state} = BotArmyElixirToolsMcpServer.StdioHandler.init(nil)
 
       tools = BotArmyElixirToolsMcpServer.Tools.list_tools()
-      assert Enum.count(tools) == 21
+      assert Enum.count(tools) == 23
     end
   end
 
