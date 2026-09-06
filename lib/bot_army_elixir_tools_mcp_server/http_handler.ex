@@ -8,10 +8,13 @@ defmodule BotArmyElixirToolsMcpServer.HttpHandler do
   """
   use Plug.Router
 
-  # NOTE: no plug(Plug.Logger) — in the starter's release the Plug version's
-  # Logger before_send reads :plug_route from private and raises KeyError on
-  # every non-OPTIONS request, turning all responses into empty-body 500s.
-  # Logging is suppressed in prod anyway.
+  # plug(:match) MUST precede plug(:dispatch): modern Plug's dispatch
+  # does a strict map_get(:plug_route) on conn.private, which only the
+  # match plug populates. Without :match every non-OPTIONS request
+  # raised KeyError → empty-body 500 (verified via in-process
+  # Plug.Test stacktrace at plug/lib/plug/router.ex:256).
+  # NOTE: no Plug.Logger — logging is suppressed in prod anyway.
+  plug(:match)
   plug(:cors)
   plug(:dispatch)
 
