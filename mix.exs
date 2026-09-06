@@ -4,10 +4,16 @@ defmodule BotArmyElixirToolsMcpServer.MixProject do
   def project do
     [
       app: :bot_army_elixir_tools_mcp_server,
-      version: "0.3.0",
+      version: "0.3.1",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      default_release: :elixir_tools_mcp_bot,
+      releases: [
+        elixir_tools_mcp_bot: [
+          applications: [bot_army_elixir_tools_mcp_server: :permanent]
+        ]
+      ],
       escript: [main_module: BotArmyElixirToolsMcpServer.CLI]
     ]
   end
