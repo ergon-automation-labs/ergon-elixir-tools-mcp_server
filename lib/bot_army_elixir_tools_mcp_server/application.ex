@@ -32,7 +32,19 @@ defmodule BotArmyElixirToolsMcpServer.Application do
     if http_only?() do
       children
     else
-      [{BotArmyElixirToolsMcpServer.StdioHandler, []} | children]
+      # restart: :transient — in a container (no TTY), stdin gives :eof and
+      # the StdioHandler exits :normal by design. With the default
+      # :permanent policy that "normal" exit still counts toward
+      # max_restarts → the whole app terminates with :shutdown shortly
+      # after boot. :transient lets a normal exit retire the child while
+      # keeping real crashes supervised.
+      [
+        Supervisor.child_spec(
+          {BotArmyElixirToolsMcpServer.StdioHandler, []},
+          restart: :transient
+        )
+        | children
+      ]
     end
   end
 

@@ -4,7 +4,7 @@ defmodule BotArmyElixirToolsMcpServer.MixProject do
   def project do
     [
       app: :bot_army_elixir_tools_mcp_server,
-      version: "0.3.4",
+      version: "0.3.5",
       # NOTE: mod: lives in application/0 below — the application/0 return
       # overrides the project application config, so putting mod: here has
       # no effect.
