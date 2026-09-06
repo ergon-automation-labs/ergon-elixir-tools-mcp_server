@@ -4,14 +4,10 @@ defmodule BotArmyElixirToolsMcpServer.MixProject do
   def project do
     [
       app: :bot_army_elixir_tools_mcp_server,
-      version: "0.3.2",
-      # mod: is what makes `mix release` actually START the application.
-      # This repo was historically an escript/CLI tool (no mod: needed),
-      # but the starter's compose runs it as a release HTTP server
-      # (MCP_PORT/MCP_TRANSPORT) — without mod: the release boots an idle
-      # skeleton: beam alive, Application.start/2 never called, port 39900
-      # never listens.
-      mod: {BotArmyElixirToolsMcpServer.Application, []},
+      version: "0.3.3",
+      # NOTE: mod: lives in application/0 below — the application/0 return
+      # overrides the project application config, so putting mod: here has
+      # no effect.
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -27,8 +23,12 @@ defmodule BotArmyElixirToolsMcpServer.MixProject do
 
   def application do
     [
-      # Don't auto-start - CLI starts the application manually
-      # This allows us to suppress logger output before the app starts
+      # mod: makes `mix release` START the application. Historically this
+      # repo was escript/CLI-only ("don't auto-start"), but the starter's
+      # compose runs it as a release HTTP server (MCP_PORT/MCP_TRANSPORT):
+      # an empty application spec made the release boot an idle skeleton
+      # (beam alive, Application.start/2 never called, port 39900 deaf).
+      mod: {BotArmyElixirToolsMcpServer.Application, []}
     ]
   end
 
