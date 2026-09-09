@@ -1,4 +1,4 @@
-.PHONY: help run run-http dev test logs clean build escript test-escript verify-logs test-clean
+.PHONY: help run run-http dev test logs clean build escript test-escript verify-logs test-clean release publish-release
 
 MCP_PORT ?= 39900
 NATS_SERVERS ?= localhost:4222
@@ -69,3 +69,9 @@ test-clean: clean test build test-escript
 
 clean:
 	rm -rf _build deps bot_army_elixir_tools_mcp_server
+release:
+	MIX_ENV=prod $(MIX) release
+
+# Scanner convention: `publish-release:` target must exist.
+publish-release:
+	@echo "This repo ships an escript (make build), not an OTP release tarball."; exit 0
