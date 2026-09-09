@@ -13,6 +13,7 @@ defmodule BotArmyElixirToolsMcpServer.Application do
       []
       |> maybe_add_stdio()
       |> maybe_add_http()
+      |> maybe_add_pulse_publisher()
 
     opts = [strategy: :one_for_one, name: BotArmyElixirToolsMcpServer.Supervisor]
     log_to_file("Starting supervisor")
@@ -64,6 +65,22 @@ defmodule BotArmyElixirToolsMcpServer.Application do
 
   defp http_enabled?, do: System.get_env(@mcp_port_env) != nil or http_only?()
   defp http_only?, do: System.get_env("MCP_TRANSPORT") == "http"
+
+  # Periodic system.health heartbeat — Synapse treats system.health as stale
+  # after ~90s; this bot had no publisher at all (metrics-lit-up arc gap).
+  # Publishes degrade to {:error, _} without a NATS connection, so the
+  # child is harmless in stdio-only/dev mode.
+  defp maybe_add_pulse_publisher(children) do
+    if System.get_env("MIX_ENV") == "test" do
+      children
+    else
+      [
+        {BotArmyLibraryRuntime.HealthPulsePublisher,
+         [app_name: :bot_army_elixir_tools_mcp_server, service: "elixir_tools_mcp"]}
+        | children
+      ]
+    end
+  end
 
   defp mcp_port do
     case System.get_env(@mcp_port_env) do
