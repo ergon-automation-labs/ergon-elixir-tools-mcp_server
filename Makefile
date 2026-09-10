@@ -1,4 +1,4 @@
-.PHONY: help run run-http dev test logs clean build escript test-escript verify-logs test-clean release publish-release
+.PHONY: help run run-http dev test logs clean build escript test-escript verify-logs test-clean release publish-release setup-hooks
 
 MCP_PORT ?= 39900
 NATS_SERVERS ?= localhost:4222
@@ -69,6 +69,10 @@ test-clean: clean test build test-escript
 
 clean:
 	rm -rf _build deps bot_army_elixir_tools_mcp_server
+setup-hooks:
+	@git config core.hooksPath git-hooks
+	@echo "✓ Git hooks installed (core.hooksPath = git-hooks)"
+
 release:
 	MIX_ENV=prod $(MIX) release
 
