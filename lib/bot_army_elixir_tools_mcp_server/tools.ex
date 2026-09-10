@@ -713,12 +713,12 @@ defmodule BotArmyElixirToolsMcpServer.Tools do
     File.write(log_file, "[#{timestamp}] Tools: #{msg}\n", [:append])
   end
 
-  # Bridge request helper - uses BotArmyRuntime.NATS for proper connection management
+  # Bridge request helper - uses BotArmyLibraryRuntime.NATS for proper connection management
   defp bridge_request(subject, payload, timeout \\ 5_000) do
     log_to_file("bridge_request: #{subject}")
 
     # Get the NATS connection from BotArmyRuntime
-    case GenServer.call(BotArmyRuntime.NATS.Connection, :get_connection) do
+    case GenServer.call(BotArmyLibraryRuntime.NATS.Connection, :get_connection) do
       {:ok, conn} ->
         log_to_file("bridge_request: Got connection, sending request")
 
