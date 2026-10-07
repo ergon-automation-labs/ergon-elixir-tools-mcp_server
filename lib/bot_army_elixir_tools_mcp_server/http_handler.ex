@@ -8,6 +8,9 @@ defmodule BotArmyElixirToolsMcpServer.HttpHandler do
   """
   use Plug.Router
 
+  # Compile-time, so it never drifts from mix.exs.
+  @server_version Mix.Project.config()[:version]
+
   # plug(:match) MUST precede plug(:dispatch): modern Plug's dispatch
   # does a strict map_get(:plug_route) on conn.private, which only the
   # match plug populates. Without :match every non-OPTIONS request
@@ -64,11 +67,13 @@ defmodule BotArmyElixirToolsMcpServer.HttpHandler do
     result = %{
       "protocolVersion" => "2025-03-26",
       "capabilities" => %{
-        "streamableHttp" => %{}
+        "streamableHttp" => %{},
+        # A client only calls tools/list when this capability is advertised.
+        "tools" => %{}
       },
       "serverInfo" => %{
         "name" => "bot-army-mcp",
-        "version" => "0.2.2"
+        "version" => @server_version
       }
     }
 

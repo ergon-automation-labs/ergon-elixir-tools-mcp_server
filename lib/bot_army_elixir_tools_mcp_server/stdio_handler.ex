@@ -7,6 +7,9 @@ defmodule BotArmyElixirToolsMcpServer.StdioHandler do
   use GenServer
   require Logger
 
+  # Compile-time, so it never drifts from mix.exs.
+  @server_version Mix.Project.config()[:version]
+
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
@@ -73,10 +76,15 @@ defmodule BotArmyElixirToolsMcpServer.StdioHandler do
 
     response = %{
       "protocolVersion" => "2024-11-05",
-      "capabilities" => %{},
+      # Advertise the `tools` capability. With `%{}` a spec-compliant client
+      # (pi, Claude Code) never calls tools/list and reports the server as
+      # "connected, 0 tools" — the tools are unreachable even though tools/list
+      # works when asked directly. We advertise only `tools`: `resources` is not
+      # implemented, and advertising it makes clients pay an error round-trip.
+      "capabilities" => %{"tools" => %{}},
       "serverInfo" => %{
         "name" => "bot-army-mcp",
-        "version" => "0.1.0"
+        "version" => @server_version
       }
     }
 

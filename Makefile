@@ -1,4 +1,4 @@
-.PHONY: help run run-http dev test logs clean build escript test-escript verify-logs test-clean release publish-release setup-hooks
+.PHONY: help run run-http dev test logs clean build escript test-escript verify-logs test-clean release publish-release setup-hooks push push-and-publish
 
 MCP_PORT ?= 39900
 NATS_SERVERS ?= localhost:4222
@@ -25,6 +25,11 @@ help:
 	@echo "Cleanup:"
 	@echo "  clean            - Remove _build, deps, compiled artifacts"
 	@echo "  logs             - Stream logs (if running in background)"
+	@echo ""
+	@echo "Release:"
+	@echo "  push             - Validate (tests + escript capability) then git push"
+	@echo "  push-and-publish - push, then run publish-release"
+	@echo "  setup-hooks      - Install git-hooks/pre-push into this clone"
 
 run:
 	@if [ -f .env.local ]; then source .env.local; fi && mix run --no-halt
@@ -79,3 +84,20 @@ release:
 # Scanner convention: `publish-release:` target must exist.
 publish-release:
 	@echo "This repo ships an escript (make build), not an OTP release tarball."; exit 0
+
+# Sanctioned push path (never raw `git push`). Runs the same validation the
+# pre-push hook runs, plus the production escript and a capability assertion
+# the hook misses, then pushes. `setup-hooks` installs the hook for pushes
+# made outside this target.
+push: setup-hooks test build
+	@echo "🔎 Pre-push checks..."
+	@(echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' && sleep 0.3) \
+		| ./bot_army_elixir_tools_mcp_server 2>/dev/null | grep -q '"tools"' \
+		|| (echo "✗ initialize response does not advertise the tools capability"; exit 1)
+	@echo "✓ initialize advertises tools capability"
+	@echo "$(date +%s):$(git rev-parse HEAD)" > .push-validated
+	@git push
+	@echo "✓ Pushed (proof: .push-validated)"
+
+# Matches the message the shipped pre-push hook prints.
+push-and-publish: push publish-release

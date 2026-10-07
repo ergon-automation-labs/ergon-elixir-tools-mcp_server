@@ -6,7 +6,7 @@ config :logger,
   backends: []
 
 # Disable PromEx HTTP endpoint to prevent startup logs
-config :bot_army_runtime,
+config :bot_army_library_runtime,
   auto_start_services: false,
   metrics_port: 9090
 

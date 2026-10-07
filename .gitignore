@@ -20,4 +20,14 @@ mix.lock
 Thumbs.db
 
 # Build artifacts
-bot_army_elixir_tools_mcp_server
+# Anchor to the repo root: the unanchored pattern also matched
+# lib/bot_army_elixir_tools_mcp_server/ and made git (and ripgrep) skip the
+# source directory, so new source files were silently untracked.
+/bot_army_elixir_tools_mcp_server
+
+# Local validation proof
+.push-validated
+
+# Crash dumps
+*.dump
+erl_crash.dump
