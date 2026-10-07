@@ -31,3 +31,5 @@ Thumbs.db
 # Crash dumps
 *.dump
 erl_crash.dump
+# Hook-local Hex/Mix homes (git-hooks/pre-push sets HEX_HOME/MIX_HOME here)
+/.cache/
