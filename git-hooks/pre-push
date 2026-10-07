@@ -15,6 +15,8 @@ if [ -z "$MIX_BIN" ]; then
   MIX_BIN="$(command -v mix 2>/dev/null || true)"
 fi
 if [ -z "$MIX_BIN" ]; then
+  echo "❌ mix not found — install Elixir, or set MIX_BIN=/path/to/mix"
+  exit 1
 fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
